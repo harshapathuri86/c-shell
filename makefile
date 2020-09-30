@@ -1,7 +1,7 @@
 CC=gcc
 DEPS = headers.h
 LFLAGS=-lreadline
-OBJ = initialize.o shell.o tokenize.o cmds.o run_cmds.o prompt.o
+OBJ = initialize.o shell.o tokenize.o redirect.o cmds.o ls.o jobs.o run_cmds.o
 
 %.o: %.c $(DEPS)
 		$(CC) -c -o $@ $< $(CFLAGS)

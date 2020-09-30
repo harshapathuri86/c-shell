@@ -1,8 +1,15 @@
 #include "headers.h"
 
-void sig_handler(int signal)
+void sig_handler(int sig)
 {
-    if (signal == SIGCHLD)
+    if (sig == SIGINT)
+    {
+        signal(SIGINT, SIG_IGN);
+        fflush(stdout);
+        fflush(stdin);
+        signal(SIGINT, sig_handler);
+    }
+    if (sig == SIGCHLD)
     {
         int i, status, pd;
         while ((pd = waitpid(-1, &status, WNOHANG)) > 0)
@@ -23,6 +30,28 @@ void sig_handler(int signal)
         }
     }
     return;
+}
+
+char *dirpath()
+{
+    char *dir = strdup(Pwd);
+    if (strncmp(dir, home, strlen(home)) == 0)
+    {
+        rel = dir + strlen(home) - 1;
+        rel[0] = '~';
+        return rel;
+    }
+    return dir;
+}
+
+void prompt()
+{
+    gethostname(buf2, 1024);
+    printf("<");
+    printf(ANSI_COLOR_GREEN "%s@%s" ANSI_COLOR_RESET, getenv("USER"), buf2);
+    printf(":");
+    printf(ANSI_COLOR_BLUE "%s" ANSI_COLOR_RESET, dirpath());
+    printf("> ");
 }
 
 void initialize()

@@ -129,135 +129,6 @@ void env(int argc, char **argv, int a)
     return;
 }
 
-void kjob(char **argv)
-{
-    int pd = atoi(argv[1]);
-    int signal = atoi(argv[2]);
-    if (pd > bg_cnt)
-    {
-        printf("No such job exists\n");
-        return;
-    }
-    kill(bg_jb[pd].pid, signal);
-}
-
-void overkill()
-{
-    int i;
-    for (i = 1; i <= bg_cnt; i++)
-    {
-        kill(bg_jb[i].pid, 9);
-    }
-}
-
-void bg(char **argv, int argc)
-{
-    if (argc != 2)
-    {
-        printf("format: bg <jobnumber>\n");
-        return;
-    }
-    else
-    {
-        int pd = atoi(argv[1]);
-        if (pd > bg_cnt)
-            printf("No such job\n");
-        else
-        {
-            int i = 1;
-            for (i = 0; i < bg_cnt; ++i)
-            {
-                if (pd == 0)
-                    break;
-                if (bg_jb[i].status == 1)
-                    pd -= 1;
-            }
-            pd = i;
-            pid_t pid = bg_jb[pd].pid;
-            kill(pid, SIGTTIN);
-            kill(pid, SIGCONT);
-        }
-    }
-}
-
-void print_jobs()
-{
-    int j = 1;
-    char status;
-    int p;
-    long unsigned mem;
-    for (int i = 1; i <= bg_cnt; i++)
-    {
-        if (bg_jb[i].status == 1)
-        {
-            char file[100];
-            sprintf(file, "/proc/%d", bg_jb[i].pid);
-            strcat(file, "/stat");
-            if ((fd = fopen(file, "r")) == NULL)
-            {
-                printf("[%d] %s %s [%d]\n", j, "DONE", bg_jb[i].command, bg_jb[i].pid);
-            }
-            else
-            {
-                fscanf(fd, "%d %*s %c %*d %*d %*d %*d %*d %*d %*d %*d %*d %*d %*d %*d %*d %*d %*d %*d %*d %*d %*d %lu %*d %*d %*d %*d %*d %*d %*d %*d %*d %*d %*d %*d %*d %*d %*d %*d %*d %*d %*d", &p, &status, &mem);
-                fclose(fd);
-                printf("[%d] ", j);
-                if (status == 'T')
-                    printf("%s ", "Stopped");
-                else
-                    printf("%s ", "Running");
-                printf("%s [%d]\n", bg_jb[i].command, bg_jb[i].pid);
-            }
-            j++;
-        }
-    }
-}
-
-void fg(int argc, char **argv)
-{
-    if (argc != 2)
-    {
-        printf("format:fg pid\n");
-        return;
-    }
-    int n = atoi(argv[1]);
-    if (n > bg_cnt)
-    {
-        printf("No job exists with that number\n");
-        return;
-    }
-    int i = 1;
-    for (i = 0; i < bg_cnt; ++i)
-    {
-        if (n == 0)
-            break;
-        if (bg_jb[i].status == 1)
-            n -= 1;
-    }
-    n = i;
-    if (bg_jb[n].status != 1)
-    {
-        printf("No such job exists\n");
-        return;
-    }
-    int pid = bg_jb[n].pid;
-    int pgid = getpgid(pid);
-    tcsetpgrp(shell, pgid);
-    fgpid = pid;
-    int status;
-    if (killpg(pgid, SIGCONT) < 0)
-        perror("cant get to foreground\n");
-    waitpid(pid, &status, WUNTRACED);
-    if (!WIFSTOPPED(status))
-    {
-        bg_jb[bg_cnt].status = 0;
-        bg_cnt--;
-        fg_jb.status = 0;
-    }
-    tcsetpgrp(shell, mypgid);
-    return;
-}
-
 char *white_space(char *buf)
 {
     if (buf == NULL)
@@ -274,22 +145,17 @@ char *white_space(char *buf)
 
 void pinfo(char *pid)
 {
-    snprintf(path, 30, "/proc/%s/stat", pid);
-    FILE *fd = fopen(path, "r");
-    if (!fd)
+    char status;
+    sprintf(file, "/proc/%s/stat", pid);
+    if ((fd = fopen(file, "r")) == NULL)
     {
-        printf("%s  No such pid\n", pid);
+        printf("No process with pid %s\n", pid);
         return;
     }
-    printf("pid -- %s\n", pid);
-    fgets(BUF, 1024, fd);
-    b[0] = strtok(BUF, " ");
-    int n = 1;
-    while (((b[n] = strtok(NULL, "' ''\t'")) != NULL) && n < 25)
-        n++;
-    b[n] = NULL;
+    fscanf(fd, "%*d %*s %c %*d %*d %*d %*d %*d %*d %*d %*d %*d %*d %*d %*d %*d %*d %*d %*d %*d %*d %*d %lu %*d %*d %*d %*d %*d %*d %*d %*d %*d %*d %*d %*d %*d %*d %*d %*d %*d %*d %*d", &status, &memory);
     fclose(fd);
-    printf("Process Status -- %s\nmemory -- %s\n", b[2], b[22]);
+    printf("pid -- %s\n", pid);
+    printf("Process Status -- %d\nmemory -- %ld\n", status, memory);
     snprintf(path, 30, "/proc/%s/exe", pid);
     l = readlink(path, BUF, sizeof(BUF) - 1);
     if (l != -1)
@@ -404,128 +270,4 @@ void nights_watch(int argc, char **argv)
         }
     }
     exit(EXIT_SUCCESS);
-}
-
-void print_details(char *name)
-{
-    //type
-    lstat(name, &per);
-    if ((per.st_mode & S_IFMT) == S_IFBLK)
-        printf("b");
-    else if ((per.st_mode & S_IFMT) == S_IFLNK)
-        printf("l");
-    else if ((per.st_mode & S_IFMT) == S_IFCHR)
-        printf("c");
-    else if ((per.st_mode & S_IFMT) == S_IFDIR)
-        printf("d");
-    else if ((per.st_mode & S_IFMT) == S_IFIFO)
-        printf("f");
-    else if ((per.st_mode & S_IFMT) == S_IFREG)
-        printf("-");
-    else if ((per.st_mode & S_IFMT) == S_IFSOCK)
-        printf("s");
-    //permissions
-    printf("%c", (per.st_mode & S_IRUSR) ? 'r' : '-');
-    printf("%c", (per.st_mode & S_IWUSR) ? 'w' : '-');
-    printf("%c", (per.st_mode & S_IXUSR) ? 'x' : '-');
-    printf("%c", (per.st_mode & S_IRGRP) ? 'r' : '-');
-    printf("%c", (per.st_mode & S_IWGRP) ? 'w' : '-');
-    printf("%c", (per.st_mode & S_IXGRP) ? 'x' : '-');
-    printf("%c", (per.st_mode & S_IROTH) ? 'r' : '-');
-    printf("%c", (per.st_mode & S_IWOTH) ? 'w' : '-');
-    printf("%c", (per.st_mode & S_IXOTH) ? 'x' : '-');
-    printf(" %4ld ", per.st_nlink);
-    // uname and grp
-    printf("%10s ", getpwuid(per.st_uid)->pw_name);
-    printf("%10s ", getgrgid(per.st_gid)->gr_name);
-    // size
-    printf("%10ld ", per.st_size);
-    // last access time
-    t = localtime(&per.st_mtime);
-    strftime(T, sizeof(T), "%b %e %Y %H:%M", t);
-    printf("%s ", T);
-    // read symlink
-    if ((per.st_mode & S_IFMT) == S_IFLNK)
-    {
-        if ((cnt = readlink(name, buf, sizeof(buf))) != -1)
-        {
-            buf[cnt] = '\0';
-            printf("%s -> %s\n", d->d_name, buf);
-        }
-    }
-    else
-        printf("%s\n", d->d_name);
-}
-
-void list_it(char **argv, int n)
-{
-    fl = fa = cnt = 0;
-    for (int i = 1; i < n; i++)
-    {
-        if (fl == 0 && argv[i] != NULL && !strcmp(argv[i], "-l"))
-            fl = 1, argv[i] = NULL, cnt += 1;
-        if (fa == 0 && argv[i] != NULL && !strcmp(argv[i], "-a"))
-            fa = 1, argv[i] = NULL, cnt += 1;
-        if (fl == 0 && fa == 0 && argv[i] != NULL && !(strcmp(argv[i], "-la") && strcmp(argv[i], "-al")))
-            fa = fl = 1, argv[i] = NULL, cnt += 1;
-    }
-    if (cnt == (n - 1))
-    {
-        D = opendir(".");
-        if (D == NULL)
-        {
-            perror("");
-            return;
-        }
-        while ((d = readdir(D)) != NULL)
-        {
-            name[0] = '\0';
-            sprintf(name, "%s/%s", ".", d->d_name);
-            if (strncmp(d->d_name, ".", 1) != 0 || fa)
-            {
-                if (fl == 1)
-                    print_details(name);
-                else
-                    printf("%s\n", d->d_name);
-            }
-        }
-    }
-    for (int i = 1; i < n; i++)
-    {
-        if (argv[i] == NULL)
-            continue;
-        if (strncmp(argv[i], "~", 1) == 0)
-        {
-            abs_dir[0] = '\0';
-            sprintf(abs_dir, "%s%s", home, argv[i] + 1);
-            argv[i] = abs_dir;
-        }
-        argv[i] = realpath(argv[i], NULL);
-        if (cnt != (n - 2))
-        {
-            printf("%s:\n", argv[i]);
-        }
-        D = opendir(argv[i]);
-        if (D == NULL)
-        {
-            perror(argv[i]);
-            return;
-        }
-        while ((d = readdir(D)) != NULL)
-        {
-            name[0] = '\0';
-            sprintf(name, "%s/%s", argv[i], d->d_name);
-            if (strncmp(d->d_name, ".", 1) != 0 || fa)
-            {
-                if (fl == 1)
-                    print_details(name);
-                else
-                    printf("%s\n", d->d_name);
-            }
-        }
-        closedir(D);
-        free(argv[i]);
-        printf("\n");
-    }
-    return;
 }
