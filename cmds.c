@@ -24,13 +24,24 @@ void echo_it(char **argv)
     printf("\n");
 }
 
-void ch_dir(char *buf)
+void ch_dir(char **argv, int argc)
 {
+    char lol[1024];
+    strcpy(lol, "");
+    for (int i = 0; i < argc; i++)
+        strcat(lol, argv[i]), strcat(lol, " ");
+    char *buf = lol;
     buf += 2;
     buf = white_space(buf);
     if (strcmp(buf, "-") == 0)
     {
-        chdir(getenv("MYOLDPWD"));
+        chdir(getenv("OLDPWD"));
+        return;
+    }
+    if (getenv("HOME") == NULL)
+    {
+        if (chdir(buf) < 0)
+            retval = -1, perror(buf);
         return;
     }
     if (strcmp(buf, "") == 0 || (!(strcmp(buf, "~") && strcmp(buf, "~/") && strcmp(buf, home))))

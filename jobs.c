@@ -1,7 +1,13 @@
 #include "headers.h"
 
-void kjob(char **argv)
+void kjob(char **argv, int argc)
 {
+    if (argc != 3)
+    {
+        fprintf(stderr, "format: kjob id signal\n");
+        retval = -1;
+        return;
+    }
     int pd = atoi(argv[1]);
     int signal = atoi(argv[2]);
     if (pd > bg_cnt || bg_jb[pd].status == 0 || pd < 1)
@@ -109,5 +115,7 @@ void fg(int argc, char **argv)
     else
         retval = -1;
     tcsetpgrp(shell, shellpgid);
+    tcgetattr(shell, &bg_jb[n].tmodes);
+    tcsetattr(shell, TCSADRAIN, &shell_tmodes);
     return;
 }

@@ -1,6 +1,6 @@
 #include "headers.h"
 
-int sys_cmds(int argc, char **argv)
+void sys_cmds(int argc, char **argv)
 {
 
     child = fork();
@@ -47,7 +47,7 @@ int sys_cmds(int argc, char **argv)
                 if (status == 2)
                 {
                     tcsetpgrp(shell, shellpgid);
-                    return 0;
+                    return;
                 }
                 retval = -1;
                 bg_jb[++bg_cnt] = fg_jb;
@@ -112,15 +112,26 @@ void built_in(char *cmd)
         return;
     if (strcmp(argv[0], "cd") == 0)
     {
-        Pwd = getenv("MYPWD");
-        ch_dir(argv[0]);
-        setenv("MYOLDPWD", Pwd, 1);
+        if (getenv("PWD") == NULL)
+        {
+            ch_dir(argv, argc);
+            return;
+        }
+        Pwd = getenv("PWD");
+        ch_dir(argv, argc);
+        setenv("OLDPWD", Pwd, 1);
         getcwd(Pwd, 1024);
-        setenv("MYPWD", Pwd, 1);
+        setenv("PWD", Pwd, 1);
     }
     else if (strcmp(argv[0], "pwd") == 0)
     {
-        printf("%s\n", getenv("MYPWD"));
+        if (getenv("PWD") == NULL)
+        {
+            fprintf(stderr, "No PWD ENV VAR :(\n");
+            retval = -1;
+            return;
+        }
+        printf("%s\n", getenv("PWD"));
     }
     else if (strcmp(argv[0], "echo") == 0)
     {
@@ -166,7 +177,7 @@ void built_in(char *cmd)
     }
     else if (strcmp(argv[0], "kjob") == 0)
     {
-        kjob(argv);
+        kjob(argv, argc);
     }
     else if (strcmp(argv[0], "fg") == 0)
     {

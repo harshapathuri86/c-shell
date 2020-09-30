@@ -4,10 +4,10 @@ void sig_handler(int sig)
 {
     if (sig == SIGINT)
     {
-        retval = -1;
         printf("\n");
+        siglongjmp(ctrlc_buf, 1);
         prompt();
-        fflush(stdout);
+        retval = -1;
     }
     if (sig == SIGCHLD)
     {
@@ -35,27 +35,31 @@ void sig_handler(int sig)
 char *dirpath()
 {
     char *dir = strdup(Pwd);
-    if (strncmp(dir, home, strlen(home)) == 0)
-    {
-        rel = dir + strlen(home) - 1;
-        rel[0] = '~';
-        return rel;
-    }
+    if (getenv("HOME") != NULL)
+        if (strncmp(dir, home, strlen(home)) == 0)
+        {
+            rel = dir + strlen(home) - 1;
+            rel[0] = '~';
+            return rel;
+        }
     return dir;
 }
 
 void prompt()
 {
     gethostname(buf2, 1024);
+    strcpy(PROMPT, "");
     if (retval == -1)
-        printf(ANSI_COLOR_RED ":'(" ANSI_COLOR_RESET);
+        strcat(PROMPT, ":'(");
     else
-        printf(ANSI_COLOR_YELLOW ":')" ANSI_COLOR_RESET);
-    printf("<");
-    printf(ANSI_COLOR_GREEN "%s@%s" ANSI_COLOR_RESET, getenv("USER"), buf2);
-    printf(":");
-    printf(ANSI_COLOR_BLUE "%s" ANSI_COLOR_RESET, dirpath());
-    printf("> ");
+        strcat(PROMPT, ":')");
+    strcat(PROMPT, "<");
+    strcat(PROMPT, getenv("USER"));
+    strcat(PROMPT, "@");
+    strcat(PROMPT, buf2);
+    strcat(PROMPT, ":");
+    strcat(PROMPT, dirpath());
+    strcat(PROMPT, "> ");
 }
 
 void initialize()
@@ -65,7 +69,7 @@ void initialize()
     if (isatty(shell))
     {
         while (tcgetpgrp(shell) != (shellpgid = getpgrp()))
-            kill(shellpgid, SIGTTIN);
+            kill(-shellpgid, SIGTTIN);
     }
     signal(SIGINT, SIG_IGN);
     signal(SIGTSTP, SIG_IGN);
@@ -73,15 +77,19 @@ void initialize()
     signal(SIGTTIN, SIG_IGN);
     signal(SIGTTOU, SIG_IGN);
     shellpid = shellpgid = getpid();
-    setpgid(shellpid, shellpgid);
+    if (setpgid(shellpid, shellpgid) < 0)
+    {
+        perror("Couldn't put the shell in its own process group");
+        exit(1);
+    }
     tcsetpgrp(shell, shellpgid);
+    tcgetattr(shell, &shell_tmodes);
     SIN = dup(STDIN_FILENO);
     SOUT = dup(STDOUT_FILENO);
     Pwd = getenv("PWD");
-    setenv("MYPWD", Pwd, 1);
-    setenv("MYOLDPWD", Pwd, 1);
-    setenv("MYHOME", Pwd, 1);
-    home = getenv("MYHOME");
+    setenv("OLDPWD", Pwd, 1);
+    setenv("HOME", Pwd, 1);
+    home = getenv("HOME");
     using_history();
     stifle_history(20);
     read_history(NULL);

@@ -5,20 +5,20 @@ int main()
     initialize();
     while (1)
     {
-//        dup2(SIN, STDIN_FILENO);
-//        dup2(SOUT, STDOUT_FILENO);
-        home = getenv("MYHOME");
+        while (sigsetjmp(ctrlc_buf, 1) != 0)
+            ;
+        home = getenv("HOME");
+        dup2(SIN, STDIN_FILENO);
+        dup2(SOUT, STDOUT_FILENO);
         prompt();
-        retval = 1;
         ptr = NULL;
-        int len = getline(&ptr, &n, stdin);
-        if (len == -1)
+        ptr = readline(PROMPT);
+        if (ptr == NULL)
         {
             overkill();
             printf("quit\n");
             exit(0);
         }
-        ptr[len - 1] = '\0';
         Dup = strdup(ptr);
         ptr = white_space(ptr);
         if (!(strcmp(ptr, "") && strcmp(ptr, "\n")))
@@ -26,6 +26,7 @@ int main()
         add_history(Dup);
         write_history(NULL);
         free(Dup);
+        retval = 1;
         tokenize_input(ptr);
     }
     free(ptr);
