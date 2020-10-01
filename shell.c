@@ -7,7 +7,7 @@ int main()
     {
         while (sigsetjmp(ctrlc_buf, 1) != 0)
             ;
-        home = getenv("HOME");
+        home = getenv("MYHOME");
         dup2(SIN, STDIN_FILENO);
         dup2(SOUT, STDOUT_FILENO);
         prompt();

@@ -34,8 +34,10 @@ void sig_handler(int sig)
 
 char *dirpath()
 {
+    if (getenv("MYPWD") == NULL)
+        setenv("MYPWD", getcwd(NULL, 0), 1), Pwd = getenv("MYPWD");
     char *dir = strdup(Pwd);
-    if (getenv("HOME") != NULL)
+    if (getenv("MYHOME") != NULL)
         if (strncmp(dir, home, strlen(home)) == 0)
         {
             rel = dir + strlen(home) - 1;
@@ -87,9 +89,10 @@ void initialize()
     SIN = dup(STDIN_FILENO);
     SOUT = dup(STDOUT_FILENO);
     Pwd = getenv("PWD");
+    setenv("MYPWD", Pwd, 1);
     setenv("OLDPWD", Pwd, 1);
-    setenv("HOME", Pwd, 1);
-    home = getenv("HOME");
+    setenv("MYHOME", Pwd, 1);
+    home = getenv("MYHOME");
     using_history();
     stifle_history(20);
     read_history(NULL);

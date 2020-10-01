@@ -38,7 +38,7 @@ void ch_dir(char **argv, int argc)
         chdir(getenv("OLDPWD"));
         return;
     }
-    if (getenv("HOME") == NULL)
+    if (getenv("MYHOME") == NULL)
     {
         if (chdir(buf) < 0)
             retval = -1, perror(buf);
@@ -171,7 +171,7 @@ void pinfo(char *pid)
     fscanf(fd, "%*d %*s %c %*d %*d %*d %*d %*d %*d %*d %*d %*d %*d %*d %*d %*d %*d %*d %*d %*d %*d %*d %lu %*d %*d %*d %*d %*d %*d %*d %*d %*d %*d %*d %*d %*d %*d %*d %*d %*d %*d %*d", &status, &memory);
     fclose(fd);
     printf("pid -- %s\n", pid);
-    printf("Process Status -- %d\nmemory -- %ld\n", status, memory);
+    printf("Process Status -- %c\nmemory -- %ld\n", status, memory);
     snprintf(path, 30, "/proc/%s/exe", pid);
     l = readlink(path, BUF, sizeof(BUF) - 1);
     if (l != -1)

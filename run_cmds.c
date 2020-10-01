@@ -112,22 +112,22 @@ void built_in(char *cmd)
         return;
     if (strcmp(argv[0], "cd") == 0)
     {
-        if (getenv("PWD") == NULL)
+        if (getenv("MYPWD") == NULL)
         {
             ch_dir(argv, argc);
             return;
         }
-        Pwd = getenv("PWD");
+        Pwd = getenv("MYPWD");
         ch_dir(argv, argc);
         setenv("OLDPWD", Pwd, 1);
         getcwd(Pwd, 1024);
-        setenv("PWD", Pwd, 1);
+        setenv("MYPWD", Pwd, 1);
     }
     else if (strcmp(argv[0], "pwd") == 0)
     {
-        if (getenv("PWD") == NULL)
+        if (getenv("MYPWD") == NULL)
         {
-            fprintf(stderr, "No PWD ENV VAR :(\n");
+            fprintf(stderr, "No MYPWD environmental variable :(\n");
             retval = -1;
             return;
         }
